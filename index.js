@@ -12,7 +12,7 @@ app.use(express.json());
 
 console.log(process.env.MY_PASS)
 
-const uri = `mongodb+srv://${MY_USERNAME}:${MY_PASS}@cluster0.yhuz2xd.mongodb.net/?retryWrites=true&w=majority`;
+const uri = `mongodb+srv://mashrafiahnam:IOwrG4DoOlIGCD3G@cluster0.yhuz2xd.mongodb.net/?retryWrites=true&w=majority`;
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -25,9 +25,16 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
+    
 
-    const userCollection = client.db(`${MY_USERNAME}`).collection('users');
+
+    const array = [];
+    const userCollection = client.db("Carz").collection('collections');
+
+    app.get('/mytoys',async (req,res)=>{
+      res.send(array);
+    })
 
     app.get('/users', async( req, res) => {
         const cursor = userCollection.find()
@@ -46,6 +53,7 @@ async function run() {
         const user = req.body;
         console.log('new user', user);
         const result = await userCollection.insertOne(user);
+        array.push(user);
         res.send(result);
     });
 
@@ -89,7 +97,7 @@ run().catch(console.dir);
 
 
 
-app.get('/', (req, res) =>{
+app.get('/hi', (req, res) =>{
     res.send('SIMPLE CRUD IS RUNNING')
 })
 
