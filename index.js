@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 
-console.log(process.env.MY_PASS)
+
 
 const uri = `mongodb+srv://mashrafiahnam:IOwrG4DoOlIGCD3G@cluster0.yhuz2xd.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -27,16 +27,15 @@ let array = [];
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
-    // await client.connect();
 
 
 
-    
+
+
     const userCollection = client.db("Carz").collection('collections');
 
 
-   
+
 
 
 
@@ -45,6 +44,14 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     })
+
+
+
+
+
+
+
+
 
     app.get('/users/:id', async (req, res) => {
       const id = req.params.id;
@@ -81,14 +88,14 @@ async function run() {
 
     })
 
- 
+
 
     app.delete('/users/:id', async (req, res) => {
       const id = req.params.id;
 
 
 
-      console.log('please delete from database', id);
+      console.log('vai database theke etare delete koren', id);
       const query = { _id: new ObjectId(id) }
 
 
@@ -96,16 +103,16 @@ async function run() {
 
       // Remove the item from the array based on _id
       array = array.filter(item => item._id.toString() !== new ObjectId(id).toString());
-    
 
-    
+
+
 
       const result = await userCollection.deleteOne(query);
       res.send(result);
     })
 
-     // moy toy
-     app.get('/mytoys', async (req, res) => {
+    // moy toy
+    app.get('/mytoys', async (req, res) => {
 
       res.send(array);
     })
@@ -114,7 +121,7 @@ async function run() {
 
 
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
 
@@ -126,11 +133,11 @@ run().catch(console.dir);
 
 
 app.get('/hi', (req, res) => {
-  res.send('SIMPLE CRUD IS RUNNING')
+  res.send('shafin,,,your server is running...')
 })
 
 app.listen(port, () => {
-  console.log(`SIMPLE CRUD is running on port, ${port}`)
+  console.log(`${port}`)
 })
 
 
