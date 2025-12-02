@@ -1,144 +1,55 @@
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-require('dotenv').config()
+const path = require('path');
+const { connectDB } = require('./src/utils/db');
+const toyRoutes = require('./src/routes/toyRoutes');
+const userRoutes = require('./src/routes/userRoutes');
+const swapRoutes = require('./src/routes/swapRoutes');
+const purchaseRoutes = require('./src/routes/purchaseRoutes');
+const transactionRoutes = require('./src/routes/transactionRoutes');
+const reviewRoutes = require('./src/routes/reviewRoutes');
+const analyticsRoutes = require('./src/routes/analyticsRoutes');
+const authRoutes = require('./src/routes/authRoutes');
+const oldToyRoutes = require('./src/routes/oldToyRoutes');
+const exchangeRoutes = require('./src/routes/exchangeRoutes');
+const shopRoutes = require('./src/routes/shopRoutes');
+
+require('dotenv').config();
+
 const app = express();
 const port = process.env.PORT || 5000;
 
-
+// Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
+// Serve static files (uploaded images)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-
-
-const uri = `mongodb+srv://mashrafiahnam:IOwrG4DoOlIGCD3G@cluster0.yhuz2xd.mongodb.net/?retryWrites=true&w=majority`;
-
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
-});
-
-// Declare the array variable outside the run() function
-let array = [];
-
-async function run() {
-  try {
-
-
-
-
-
-    const userCollection = client.db("Carz").collection('collections');
-
-
-
-
-
-
-    app.get('/users', async (req, res) => {
-      const cursor = userCollection.find()
-      const result = await cursor.toArray();
-      res.send(result);
-    })
-
-
-
-
-
-
-
-
-
-    app.get('/users/:id', async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) }
-      const user = await userCollection.findOne(query);
-      res.send(user);
-    })
-
-    app.post('/users', async (req, res) => {
-      const user = req.body;
-      console.log('new user', user);
-      const result = await userCollection.insertOne(user);
-      array.push(user);
-      res.send(result);
-    });
-
-    app.put('/users/:id', async (req, res) => {
-      const id = req.params.id;
-      const user = req.body;
-      console.log(id, user);
-
-      const filter = { _id: new ObjectId(id) }
-      const options = { upsert: true }
-      const updatedUser = {
-        $set: {
-          price: user.price,
-          available_quantity: user.available_quantity,
-          detail_description: user.detail_description
-        }
-      }
-
-      const result = await userCollection.updateOne(filter, updatedUser, options);
-      res.send(result);
-
-    })
-
-
-
-    app.delete('/users/:id', async (req, res) => {
-      const id = req.params.id;
-
-
-
-      console.log('vai database theke etare delete koren', id);
-      const query = { _id: new ObjectId(id) }
-
-
-
-
-      // Remove the item from the array based on _id
-      array = array.filter(item => item._id.toString() !== new ObjectId(id).toString());
-
-
-
-
-      const result = await userCollection.deleteOne(query);
-      res.send(result);
-    })
-
-    // moy toy
-    app.get('/mytoys', async (req, res) => {
-
-      res.send(array);
-    })
-
-
-
-
-
-    // await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } finally {
-
-    // await client.close();
-  }
-}
-run().catch(console.dir);
-
-
+// Routes
+app.use('/', authRoutes); // Mounts /auth/register, /auth/login
+app.use('/', toyRoutes); // Mounts /toys, /mytoys
+app.use('/', userRoutes); // Mounts /users
+app.use('/', swapRoutes); // Mounts /swap
+app.use('/', purchaseRoutes); // Mounts /purchase
+app.use('/', transactionRoutes); // Mounts /transactions
+app.use('/', reviewRoutes); // Mounts /reviews
+app.use('/', analyticsRoutes); // Mounts /analytics
+app.use('/', oldToyRoutes); // Mounts /old-toys
+app.use('/', exchangeRoutes); // Mounts /exchange
+app.use('/', shopRoutes); // Mounts /shops
 
 app.get('/hi', (req, res) => {
   res.send('shafin,,,your server is running...')
-})
+});
 
-app.listen(port, () => {
-  console.log(`${port}`)
-})
+// Start Server
+const startServer = async () => {
+  await connectDB();
+  app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+  });
+};
 
-
-
+startServer().catch(console.dir);

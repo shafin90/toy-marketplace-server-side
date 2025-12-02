@@ -4,16 +4,21 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start":"node index.js",
+    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
-    "mongodb": "^5.5.0"
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^5.5.0",
+    "multer": "^2.0.2",
+    "nodemailer": "^7.0.11",
+    "stripe": "^20.0.0"
   }
 }
