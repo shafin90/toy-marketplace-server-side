@@ -1,4 +1,5 @@
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 const path = require('path');
 const { connectDB } = require('./src/utils/db');
@@ -13,10 +14,13 @@ const authRoutes = require('./src/routes/authRoutes');
 const oldToyRoutes = require('./src/routes/oldToyRoutes');
 const exchangeRoutes = require('./src/routes/exchangeRoutes');
 const shopRoutes = require('./src/routes/shopRoutes');
+const chatRoutes = require('./src/routes/chatRoutes');
+const { initializeSocket } = require('./src/socket/socketServer');
 
 require('dotenv').config();
 
 const app = express();
+const server = http.createServer(app);
 const port = process.env.PORT || 5000;
 
 // Middleware
@@ -39,16 +43,21 @@ app.use('/', analyticsRoutes); // Mounts /analytics
 app.use('/', oldToyRoutes); // Mounts /old-toys
 app.use('/', exchangeRoutes); // Mounts /exchange
 app.use('/', shopRoutes); // Mounts /shops
+app.use('/', chatRoutes); // Mounts /chat
 
 app.get('/hi', (req, res) => {
   res.send('shafin,,,your server is running...')
 });
 
+// Initialize Socket.io
+const io = initializeSocket(server);
+
 // Start Server
 const startServer = async () => {
   await connectDB();
-  app.listen(port, () => {
+  server.listen(port, () => {
     console.log(`Server running on port ${port}`);
+    console.log(`Socket.io server initialized`);
   });
 };
 

@@ -44,6 +44,30 @@ const UserModel = {
                 } 
             }
         );
+    },
+
+    /**
+     * Update user credits/coins
+     * @param {string} email - User email
+     * @param {number} amount - Amount to add (positive) or subtract (negative)
+     * @param {number} swapCount - Optional swap count increment
+     * @returns {Promise} Update result
+     */
+    updateCredits: async (email, amount, swapCount = 0) => {
+        const updateDoc = {
+            $inc: {
+                credits: amount,
+                coins: amount, // Keep both credits and coins in sync
+                swapCount: swapCount
+            },
+            $set: {
+                updatedAt: new Date()
+            }
+        };
+        return await getCollection(collectionName).updateOne(
+            { email: email },
+            updateDoc
+        );
     }
 };
 

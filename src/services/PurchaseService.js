@@ -168,6 +168,103 @@ const PurchaseService = {
             message: 'Purchase confirmed and completed',
             paymentAmount: toy.price
         };
+    },
+
+    purchaseWithCoins: async (toyId, buyerEmail) => {
+        // Get toy
+        const toy = await ToyModel.findById(toyId);
+        if (!toy || toy.status !== 'available') {
+            throw new Error('Toy not available for purchase');
+        }
+
+        // Check if toy has coinCost or creditCost
+        const coinCost = toy.coinCost || toy.creditCost || 0;
+        if (coinCost <= 0) {
+            throw new Error('This toy cannot be purchased with coins');
+        }
+
+        // Get buyer
+        const buyer = await UserModel.findByEmail(buyerEmail);
+        if (!buyer) {
+            throw new Error('Buyer not found');
+        }
+
+        // Check if buyer is trying to buy their own toy
+        if (toy.listedBy === buyerEmail) {
+            throw new Error('You cannot purchase your own toy');
+        }
+
+        // Check available quantity
+        const currentQuantity = toy.available_quantity || toy.quantity || 0;
+        if (currentQuantity <= 0) {
+            throw new Error('This toy is out of stock');
+        }
+
+        // Check if buyer has enough credits/coins
+        const buyerCredits = buyer.credits || buyer.coins || 0;
+        if (buyerCredits < coinCost) {
+            throw new Error(`Insufficient coins. You have ${buyerCredits} coins but need ${coinCost} coins.`);
+        }
+
+        // Get seller
+        const seller = await UserModel.findByEmail(toy.listedBy);
+        if (!seller) {
+            throw new Error('Seller not found');
+        }
+
+        // Execute purchase: deduct from buyer, add to seller
+        await UserModel.updateCredits(buyerEmail, -coinCost, 0);
+        await UserModel.updateCredits(toy.listedBy, coinCost, 0);
+
+        // Atomically decrement quantity
+        await ToyModel.decrementQuantity(toyId, 1);
+        
+        // Record purchase details
+        await ToyModel.update(toyId, {
+            purchasedBy: buyerEmail,
+            purchasedAt: new Date(),
+            purchaseMethod: 'coins',
+            purchaseAmount: coinCost
+        });
+
+        // Create transaction records
+        await TransactionModel.create({
+            type: 'purchase',
+            userId: buyerEmail,
+            toyId: toyId,
+            amount: -coinCost,
+            currency: 'coins',
+            status: 'completed',
+            description: `Purchased ${toy.name} with coins`
+        });
+
+        await TransactionModel.create({
+            type: 'sale',
+            userId: toy.listedBy,
+            toyId: toyId,
+            amount: coinCost,
+            currency: 'coins',
+            status: 'completed',
+            description: `Sold ${toy.name} for ${coinCost} coins`
+        });
+
+        // Send email notifications
+        try {
+            await EmailService.sendPurchaseConfirmation(buyerEmail, toy.name, 'coins', coinCost);
+            await EmailService.sendNewPurchaseNotification(toy.listedBy, toy.name, buyerEmail);
+        } catch (emailError) {
+            console.error('Email notification error:', emailError);
+        }
+
+        // Get updated buyer info
+        const updatedBuyer = await UserModel.findByEmail(buyerEmail);
+
+        return {
+            success: true,
+            message: 'Purchase successful',
+            coinCost: coinCost,
+            remainingCoins: updatedBuyer.credits || updatedBuyer.coins || 0
+        };
     }
 };
 

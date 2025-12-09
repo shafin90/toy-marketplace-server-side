@@ -1,6 +1,7 @@
 const ExchangeRequestModel = require('../models/ExchangeRequestModel');
 const OldToyModel = require('../models/OldToyModel');
 const ToyModel = require('../models/ToyModel');
+const TransactionModel = require('../models/TransactionModel');
 const EmailService = require('./EmailService');
 
 const ExchangeService = {
@@ -193,6 +194,28 @@ const ExchangeService = {
         return await ExchangeRequestModel.findById(exchangeId);
     },
 
+    confirmExchangePayment: async (exchangeId, paymentIntentId) => {
+        const exchange = await ExchangeRequestModel.findById(exchangeId);
+        if (!exchange) {
+            throw new Error('Exchange request not found');
+        }
+        if (exchange.status !== 'user_accepted') {
+            throw new Error('Exchange must be accepted by user first');
+        }
+
+        // Verify payment (you can add PaymentService.confirmPayment here if needed)
+        // For now, we'll trust that payment was successful if this is called
+
+        // Update exchange status to payment_confirmed
+        await ExchangeRequestModel.update(exchangeId, {
+            status: 'payment_confirmed',
+            paymentIntentId: paymentIntentId,
+            paymentConfirmedAt: new Date()
+        });
+
+        return await ExchangeRequestModel.findById(exchangeId);
+    },
+
     confirmExchange: async (exchangeId, shopOwnerEmail) => {
         const exchange = await ExchangeRequestModel.findById(exchangeId);
         if (!exchange) {
@@ -201,11 +224,33 @@ const ExchangeService = {
         if (exchange.shopOwnerEmail !== shopOwnerEmail) {
             throw new Error('You can only confirm your own shop exchanges');
         }
-        if (exchange.status !== 'user_accepted') {
-            throw new Error('User must accept the exchange first');
+        // Allow confirmation if payment is confirmed OR user accepted (for backward compatibility)
+        if (exchange.status !== 'payment_confirmed' && exchange.status !== 'user_accepted') {
+            throw new Error('Payment must be confirmed before delivery can be arranged');
         }
 
-        await ExchangeRequestModel.updateStatus(exchangeId, 'confirmed');
+        // Get product
+        const product = await ToyModel.findById(exchange.productId);
+        if (!product) {
+            throw new Error('Product not found');
+        }
+
+        // Check available quantity
+        const currentQuantity = product.available_quantity || product.quantity || 0;
+        if (currentQuantity <= 0) {
+            throw new Error('Product is out of stock');
+        }
+
+        // Decrement product quantity
+        await ToyModel.decrementQuantity(exchange.productId, 1);
+
+        // Mark product as purchased
+        await ToyModel.update(exchange.productId, {
+            purchasedBy: exchange.userId,
+            purchasedAt: new Date(),
+            purchaseMethod: 'exchange',
+            purchaseAmount: exchange.finalPrice
+        });
 
         // Mark old toys as exchanged
         for (const oldToy of exchange.oldToys) {
@@ -213,6 +258,31 @@ const ExchangeService = {
                 await OldToyModel.updateStatus(oldToy.oldToyId, 'exchanged');
             }
         }
+
+        // Create transaction record
+        await TransactionModel.create({
+            type: 'exchange',
+            userId: exchange.userId,
+            toyId: exchange.productId,
+            amount: exchange.finalPrice,
+            currency: 'money',
+            status: 'completed',
+            description: `Exchanged old toys for ${product.name} with ${exchange.totalDiscount} discount`,
+            paymentDetails: {
+                paymentIntentId: exchange.paymentIntentId,
+                method: 'stripe',
+                originalPrice: exchange.originalPrice,
+                totalDiscount: exchange.totalDiscount,
+                finalPrice: exchange.finalPrice
+            }
+        });
+
+        // Update exchange status to confirmed (delivery arranged)
+        await ExchangeRequestModel.update(exchangeId, {
+            status: 'confirmed',
+            deliveryStatus: 'pending',
+            confirmedAt: new Date()
+        });
 
         // Send delivery notification
         try {

@@ -86,6 +86,22 @@ const ExchangeController = {
         }
     },
 
+    confirmExchangePayment: async (req, res) => {
+        try {
+            const { exchangeId } = req.params;
+            const { paymentIntentId } = req.body;
+
+            if (!paymentIntentId) {
+                return res.status(400).send({ message: 'Payment intent ID is required' });
+            }
+
+            const result = await ExchangeService.confirmExchangePayment(exchangeId, paymentIntentId);
+            res.send(result);
+        } catch (error) {
+            res.status(400).send({ message: error.message });
+        }
+    },
+
     confirmExchange: async (req, res) => {
         try {
             const { exchangeId } = req.params;

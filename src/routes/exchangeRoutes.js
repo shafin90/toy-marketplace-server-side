@@ -22,6 +22,9 @@ router.put('/exchange/:exchangeId/accept', authenticate, ExchangeController.user
 // User reject exchange
 router.put('/exchange/:exchangeId/reject', authenticate, ExchangeController.userRejectExchange);
 
+// Confirm exchange payment (after Stripe payment)
+router.post('/exchange/:exchangeId/confirm-payment', authenticate, ExchangeController.confirmExchangePayment);
+
 // Confirm exchange (shop owner - after delivery)
 router.put('/exchange/:exchangeId/confirm', authenticate, ExchangeController.confirmExchange);
 
