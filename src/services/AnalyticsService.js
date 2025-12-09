@@ -52,6 +52,41 @@ const AnalyticsService = {
                 .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                 .slice(0, 10);
 
+            // Sales trends (last 30 days)
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            const recentSalesFiltered = sales.filter(s => new Date(s.createdAt) >= thirtyDaysAgo);
+            
+            // Daily sales trend
+            const dailySales = {};
+            recentSalesFiltered.forEach(sale => {
+                const date = new Date(sale.createdAt).toISOString().split('T')[0];
+                dailySales[date] = (dailySales[date] || 0) + 1;
+            });
+
+            // Revenue trends
+            const dailyRevenue = {};
+            recentSalesFiltered.forEach(sale => {
+                const date = new Date(sale.createdAt).toISOString().split('T')[0];
+                dailyRevenue[date] = (dailyRevenue[date] || 0) + (sale.amount || 0);
+            });
+
+            // Category performance
+            const categorySales = {};
+            shopToysList.forEach(toy => {
+                const category = toy.subcategory || toy.sub_category || 'other';
+                const toySales = sales.filter(s => s.toyId?.toString() === toy._id.toString());
+                categorySales[category] = {
+                    count: (categorySales[category]?.count || 0) + toySales.length,
+                    revenue: (categorySales[category]?.revenue || 0) + 
+                        toySales.reduce((sum, s) => sum + (s.amount || 0), 0)
+                };
+            });
+
+            // Conversion rate
+            const totalViews = shopToysList.reduce((sum, toy) => sum + (toy.viewCount || 0), 0);
+            const conversionRate = totalViews > 0 ? (sales.length / totalViews * 100).toFixed(2) : 0;
+
             return {
                 totalToysListed,
                 soldToys,
@@ -61,8 +96,15 @@ const AnalyticsService = {
                 averageRating: parseFloat(averageRating.toFixed(2)),
                 totalReviews: reviews.length,
                 popularToys,
-                recentSales,
-                salesCount: sales.length
+                recentSales: recentSales.slice(0, 10),
+                salesCount: sales.length,
+                trends: {
+                    dailySales,
+                    dailyRevenue,
+                    categoryPerformance: categorySales
+                },
+                conversionRate: parseFloat(conversionRate),
+                totalViews
             };
         } catch (error) {
             console.error('Error getting shop analytics:', error);
@@ -100,6 +142,24 @@ const AnalyticsService = {
             );
         } catch (error) {
             console.error('Error getting sales trend:', error);
+            throw error;
+        }
+    },
+
+    getUserAnalytics: async (userEmail) => {
+        try {
+            const transactions = await TransactionModel.findByUser(userEmail);
+            const purchases = transactions.filter(t => t.type === 'purchase');
+            const exchanges = transactions.filter(t => t.type === 'exchange');
+            
+            return {
+                totalPurchases: purchases.length,
+                totalExchanges: exchanges.length,
+                totalSpent: purchases.reduce((sum, t) => sum + (t.amount || 0), 0),
+                totalSaved: exchanges.reduce((sum, t) => sum + (t.discountAmount || 0), 0)
+            };
+        } catch (error) {
+            console.error('Error getting user analytics:', error);
             throw error;
         }
     }

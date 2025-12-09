@@ -12,9 +12,12 @@ const ToyService = {
             const searchTerm = filters.search.toLowerCase();
             toys = toys.filter(toy => 
                 toy.name?.toLowerCase().includes(searchTerm) ||
+                toy.detail_description?.toLowerCase().includes(searchTerm) ||
                 toy.description?.toLowerCase().includes(searchTerm) ||
                 toy.subcategory?.toLowerCase().includes(searchTerm) ||
-                toy.sub_category?.toLowerCase().includes(searchTerm)
+                toy.sub_category?.toLowerCase().includes(searchTerm) ||
+                toy.seller_name?.toLowerCase().includes(searchTerm) ||
+                toy.brand?.toLowerCase().includes(searchTerm)
             );
         }
 
@@ -25,27 +28,78 @@ const ToyService = {
         }
 
         if (filters.minPrice !== undefined) {
-            toys = toys.filter(toy => (toy.price || 0) >= filters.minPrice);
+            toys = toys.filter(toy => {
+                const price = toy.offerPrice || toy.price || 0;
+                return price >= filters.minPrice;
+            });
         }
 
         if (filters.maxPrice !== undefined) {
-            toys = toys.filter(toy => (toy.price || 0) <= filters.maxPrice);
+            toys = toys.filter(toy => {
+                const price = toy.offerPrice || toy.price || 0;
+                return price <= filters.maxPrice;
+            });
+        }
+
+        // Advanced filters
+        if (filters.condition) {
+            toys = toys.filter(toy => toy.condition === filters.condition);
+        }
+
+        if (filters.ageGroup) {
+            toys = toys.filter(toy => {
+                const ageGroup = toy.ageGroup || toy.age_group;
+                if (!ageGroup) return false;
+                return ageGroup === filters.ageGroup || ageGroup.includes(filters.ageGroup);
+            });
+        }
+
+        if (filters.brand) {
+            toys = toys.filter(toy => 
+                toy.brand?.toLowerCase() === filters.brand.toLowerCase()
+            );
+        }
+
+        if (filters.minRating !== undefined) {
+            toys = toys.filter(toy => (toy.ratings || 0) >= filters.minRating);
+        }
+
+        if (filters.allowExchange !== undefined) {
+            toys = toys.filter(toy => toy.allowOldToyExchange === filters.allowExchange);
+        }
+
+        if (filters.shopOwnerEmail) {
+            toys = toys.filter(toy => toy.listedBy === filters.shopOwnerEmail);
         }
 
         // Sorting
         if (filters.sortBy) {
             switch (filters.sortBy) {
                 case 'price_asc':
-                    toys.sort((a, b) => (a.price || 0) - (b.price || 0));
+                    toys.sort((a, b) => {
+                        const priceA = a.offerPrice || a.price || 0;
+                        const priceB = b.offerPrice || b.price || 0;
+                        return priceA - priceB;
+                    });
                     break;
                 case 'price_desc':
-                    toys.sort((a, b) => (b.price || 0) - (a.price || 0));
+                    toys.sort((a, b) => {
+                        const priceA = a.offerPrice || a.price || 0;
+                        const priceB = b.offerPrice || b.price || 0;
+                        return priceB - priceA;
+                    });
+                    break;
+                case 'rating_desc':
+                    toys.sort((a, b) => (b.ratings || 0) - (a.ratings || 0));
                     break;
                 case 'newest':
                     toys.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
                     break;
                 case 'oldest':
                     toys.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+                    break;
+                case 'popular':
+                    toys.sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
                     break;
             }
         }

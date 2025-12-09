@@ -15,6 +15,20 @@ const oldToyRoutes = require('./src/routes/oldToyRoutes');
 const exchangeRoutes = require('./src/routes/exchangeRoutes');
 const shopRoutes = require('./src/routes/shopRoutes');
 const chatRoutes = require('./src/routes/chatRoutes');
+const wishlistRoutes = require('./src/routes/wishlistRoutes');
+const notificationRoutes = require('./src/routes/notificationRoutes');
+const recentlyViewedRoutes = require('./src/routes/recentlyViewedRoutes');
+const priceAlertRoutes = require('./src/routes/priceAlertRoutes');
+const shopFollowRoutes = require('./src/routes/shopFollowRoutes');
+const referralRoutes = require('./src/routes/referralRoutes');
+const deliveryRoutes = require('./src/routes/deliveryRoutes');
+const collectionRoutes = require('./src/routes/collectionRoutes');
+const sustainabilityRoutes = require('./src/routes/sustainabilityRoutes');
+const recommendationRoutes = require('./src/routes/recommendationRoutes');
+const tradeInRoutes = require('./src/routes/tradeInRoutes');
+const bulkExchangeRoutes = require('./src/routes/bulkExchangeRoutes');
+const quickReorderRoutes = require('./src/routes/quickReorderRoutes');
+const shopComparisonRoutes = require('./src/routes/shopComparisonRoutes');
 const { initializeSocket } = require('./src/socket/socketServer');
 
 require('dotenv').config();
@@ -44,6 +58,20 @@ app.use('/', oldToyRoutes); // Mounts /old-toys
 app.use('/', exchangeRoutes); // Mounts /exchange
 app.use('/', shopRoutes); // Mounts /shops
 app.use('/', chatRoutes); // Mounts /chat
+app.use('/', wishlistRoutes); // Mounts /wishlist
+app.use('/', notificationRoutes); // Mounts /notifications
+app.use('/', recentlyViewedRoutes); // Mounts /recently-viewed
+app.use('/', priceAlertRoutes); // Mounts /price-alerts
+app.use('/', shopFollowRoutes); // Mounts /shop-follow
+app.use('/', referralRoutes); // Mounts /referral
+app.use('/', deliveryRoutes); // Mounts /delivery
+app.use('/', collectionRoutes); // Mounts /collections
+app.use('/', sustainabilityRoutes); // Mounts /sustainability
+app.use('/', recommendationRoutes); // Mounts /recommendations
+app.use('/', tradeInRoutes); // Mounts /trade-in
+app.use('/', bulkExchangeRoutes); // Mounts /bulk-exchange
+app.use('/', quickReorderRoutes); // Mounts /quick-reorder
+app.use('/', shopComparisonRoutes); // Mounts /shop-comparison
 
 app.get('/hi', (req, res) => {
   res.send('shafin,,,your server is running...')
