@@ -1,114 +1,104 @@
-# Carz - Toy Swap & Marketplace Server
+# Toy Swap Circle — Backend (Node/Express + MongoDB)
 
-A robust backend server for a toy marketplace and swapping platform. This application allows users to list toys, manage an inventory, and perform credit-based swaps with other users.
+- **Live API:** https://toy-marketplace-server-side-omega.vercel.app/
+- **Frontend (live):** https://toy-marketplace-client-side-r8j2.vercel.app/
+- **Frontend repo:** https://github.com/shafin90/toy-marketplace-client-side
+- **Backend repo:** https://github.com/shafin90/toy-marketplace-server-side
 
-## 💡 The Problem & Solution
+This service powers Toy Swap Circle: a toy marketplace and swapping platform with credit-based exchanges, cash purchases, analytics for shop owners, and push-ready alerts.
 
-### The Problem
-- **High Costs**: Quality toys and die-cast models are expensive.
-- **Short Lifespan**: Kids outgrow toys quickly, leading to clutter.
-- **Waste**: Unwanted toys often end up in landfills.
+## Purpose
+- Make quality toys affordable and circular by enabling **swaps** and discounted buys.
+- Cut waste/clutter by keeping toys in circulation instead of landfills.
+- Give shop owners the tools to manage stock, exchanges, and revenue insight.
 
-### The Solution: "Toy Swap Circle"
-We created a **Credit-Based Exchange System**. Instead of spending cash, users:
-1.  **List old toys** to earn virtual credits.
-2.  **Spend credits** to get "new" toys from others.
-3.  **Reduce waste** by keeping toys in circulation.
+## Problem We Solve
+- **High cost & short lifespan:** Kids outgrow toys quickly; premium toys are pricey.
+- **Waste & storage pain:** Unused toys pile up or get trashed.
+- **Discovery & trust:** Families need an easy, safe way to trade/buy age-appropriate toys with transparent pricing and stock signals.
 
-## 🚀 Features
+## How Swapping Works
+- Users list old toys to earn credits/discounts.
+- Credits can be applied to other toys or combined with cash checkout.
+- Owners can configure exchange/discount rules (trade-in, bulk exchange, old-toy-for-new).
 
-### 🔄 Toy Swap System
-- **Credit Economy**: Users earn credits by listing/swapping toys and spend credits to acquire new ones.
-- **Secure Transactions**: Atomic-like swap operations ensure credits are deducted and added correctly while ownership is transferred.
-- **Inventory Management**: Users can track their own toys and see what is available in the community.
+## Impactful Approaches
+- **3-layer architecture:** Controller → Service → Model keeps business logic testable and isolated from transport/DB.
+- **Optimized analytics:** Mongo aggregation pipelines drive shop dashboards (revenue, orders, inventory split) without over-fetching.
+- **Safer indexing:** Text/unique indexes created with try/catch and sparse options to tolerate `apiStrict` and null owner emails.
+- **JWT auth everywhere:** Token-based auth protects purchase, exchange, and owner surfaces.
+- **Real-time ready:** Socket.io bootstrap for chat/notifications; HTTP APIs stay stateless.
 
-### 📦 Marketplace Core
-- **CRUD Operations**: Full Create, Read, Update, Delete support for toy listings.
-- **Search & Filter**: (Coming Soon) Find toys by name, category, or price.
-- **User Profiles**: Track user credits, swap history, and reputation.
+## Core Capabilities
+- **Auth & Profiles:** Register/login with hashed passwords; JWT issuance; roles for `user` vs `shop_owner`.
+- **Toys & Marketplace:** CRUD for toys, search/filter helpers, pricing, quantity, images served from `/uploads`.
+- **Swaps & Credit Flows:** Credit-based swap execution (`/swap`), trade-ins, old-toy intake, bulk exchanges, and quick reorders.
+- **Purchases & Transactions:** Cash/Stripe-facing purchase paths, order history, and transaction records.
+- **Alerts & Engagement:** Price alerts, back-in-stock hooks, wishlist, shop follow, referrals, and notifications API.
+- **Discovery & Personalization:** Recommendations, recently viewed tracking, collections, shop comparison.
+- **Analytics for Owners:** Revenue/orders trends and inventory breakdown via aggregation.
+- **Sustainability:** Old-toy collection and sustainability metrics endpoints.
+- **Chat:** Socket-enabled chat routes for buyer/seller conversations.
 
-### 🏗 Architecture
-- **3-Layer Design**: Built with a clean Controller-Service-Model architecture for scalability.
-- **MongoDB Native**: Uses the official MongoDB driver for maximum performance and flexibility.
+## Tech Stack
+- Node.js, Express.js
+- MongoDB (native driver)
+- JWT for auth, bcrypt for hashing
+- Socket.io for realtime transport
 
----
+## API Surface (high level)
+- **Auth:** `/auth/register`, `/auth/login`
+- **Users:** `/users`, `/users/:email`
+- **Toys & Catalog:** `/toys`, `/toys/:id`, `/mytoys`, `/collections`, `/recommendations`, `/recently-viewed`
+- **Swaps & Exchanges:** `/swap`, `/exchange`, `/trade-in`, `/bulk-exchange`, `/quick-reorder`
+- **Commerce:** `/purchase`, `/transactions`, `/delivery`
+- **Ownership & Shops:** `/shops`, `/shop-comparison`, `/shop-follow`
+- **Alerts & Social:** `/price-alerts`, `/notifications`, `/wishlist`, `/referral`
+- **Reviews:** `/reviews`
+- **Analytics:** `/analytics` (aggregated dashboards)
+- **Sustainability:** `/sustainability`, `/old-toys`
+- **Chat:** `/chat`
 
-## 🛠 Tech Stack
-- **Runtime**: Node.js
-- **Framework**: Express.js
-- **Database**: MongoDB
-- **Architecture**: MVC (Model-View-Controller) / Layered
+## Architecture & Design
+- **Controller/Service/Model separation** keeps HTTP thin and business logic reusable.
+- **Mongo connection** via `src/utils/db.js`; indexes set in `src/utils/indexes.js`.
+- **Aggregation-first analytics** avoids client-side heavy lifting.
+- **Static uploads** served from `/uploads` for listing images.
 
----
+## Running Locally
+```bash
+git clone https://github.com/shafin90/toy-marketplace-server-side.git
+cd toy-marketplace-server-side
+npm install
+```
 
-## 🔌 API Endpoints
+Create `.env` (keys are optional defaults but recommended):
+```
+PORT=5000
+JWT_SECRET=change-me
+JWT_EXPIRES_IN=7d
+```
 
-### 🧸 Toys
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/toys` | Get all **available** toys (excludes swapped items). |
-| `GET` | `/toys/:id` | Get details of a specific toy. |
-| `POST` | `/toys` | List a new toy. Requires `creditCost` and `sellerEmail`. |
-| `PUT` | `/toys/:id` | Update toy details (Price, Description, Quantity). |
-| `DELETE` | `/toys/:id` | Remove a toy listing. |
-| `GET` | `/mytoys?email=...` | Get all toys listed by a specific user. |
+> MongoDB connection string is currently defined in `src/utils/db.js`. Update it to point to your cluster (or adapt to read `MONGODB_URI`).
 
-### 👤 Users
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `POST` | `/users` | Register a new user. **Bonus**: 50 starting credits! |
-| `GET` | `/users/:email` | Get user profile (Credits, Swap Count). |
+Start the server:
+```bash
+npm start      # or: node index.js
+# Health check: GET http://localhost:5000/hi
+```
 
-### 🤝 Swaps
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `POST` | `/swap` | Execute a swap. Requires `toyId`, `buyerEmail`, `sellerEmail`. |
+## Deployment
+- Deployed API: https://toy-marketplace-server-side-omega.vercel.app/
+- Frontend live (consumes this API): https://toy-marketplace-client-side-r8j2.vercel.app/
 
----
-
-## ⚙️ Installation & Setup
-
-1.  **Clone the repository**
-    ```bash
-    git clone <repository-url>
-    cd toy-marketplace-server-side
-    ```
-
-2.  **Install Dependencies**
-    ```bash
-    npm install
-    ```
-
-3.  **Configure Environment**
-    Create a `.env` file in the root directory (see `.env.example`).
-    ```env
-    DB_USER=your_mongodb_username
-    DB_PASS=your_mongodb_password
-    PORT=5000
-    ```
-
-4.  **Run the Server**
-    ```bash
-    # Development Mode
-    npm run start
-    
-    # Or directly
-    node index.js
-    ```
-
-5.  **Test the API**
-    The server will start on `http://localhost:5000`.
-    - Health Check: `GET http://localhost:5000/hi`
-
----
-
-## 📂 Project Structure
+## Project Structure
 ```
 src/
-├── config/       # Configuration files
-├── controllers/  # Request handlers
-├── models/       # Database interactions
-├── routes/       # API route definitions
-├── services/     # Business logic
-└── utils/        # Utility functions (DB connection)
+├─ controllers/   # HTTP adapters
+├─ services/      # Business logic
+├─ models/        # Data layer helpers
+├─ routes/        # Route wiring
+├─ utils/         # DB, indexes, JWT
+└─ socket/        # Socket.io bootstrap
+uploads/          # Served media for toys
 ```
