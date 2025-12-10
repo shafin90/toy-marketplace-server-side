@@ -3,6 +3,7 @@ const http = require('http');
 const cors = require('cors');
 const path = require('path');
 const { connectDB } = require('./src/utils/db');
+const { createIndexes } = require('./src/utils/indexes');
 const toyRoutes = require('./src/routes/toyRoutes');
 const userRoutes = require('./src/routes/userRoutes');
 const swapRoutes = require('./src/routes/swapRoutes');
@@ -83,6 +84,10 @@ const io = initializeSocket(server);
 // Start Server
 const startServer = async () => {
   await connectDB();
+  
+  // Create database indexes for query optimization
+  await createIndexes();
+  
   server.listen(port, () => {
     console.log(`Server running on port ${port}`);
     console.log(`Socket.io server initialized`);

@@ -114,32 +114,46 @@ const AnalyticsService = {
 
     getSalesTrend: async (shopOwnerEmail, days = 30) => {
         try {
-            const transactions = await TransactionModel.findByUser(shopOwnerEmail);
-            const sales = transactions.filter(t => 
-                t.type === 'purchase' && t.currency === 'money' && t.amount > 0
-            );
-
+            const { getCollection } = require('../utils/db');
+            const transactionsCollection = getCollection('transactions');
+            
             const startDate = new Date();
             startDate.setDate(startDate.getDate() - days);
 
-            const filteredSales = sales.filter(sale => 
-                new Date(sale.createdAt) >= startDate
-            );
-
-            // Group by date
-            const salesByDate = {};
-            filteredSales.forEach(sale => {
-                const date = new Date(sale.createdAt).toISOString().split('T')[0];
-                if (!salesByDate[date]) {
-                    salesByDate[date] = { date, count: 0, revenue: 0 };
+            // Optimized aggregation pipeline - single query instead of multiple
+            const salesTrend = await transactionsCollection.aggregate([
+                {
+                    $match: {
+                        userEmail: shopOwnerEmail,
+                        type: 'purchase',
+                        currency: 'money',
+                        amount: { $gt: 0 },
+                        createdAt: { $gte: startDate }
+                    }
+                },
+                {
+                    $group: {
+                        _id: {
+                            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
+                        },
+                        count: { $sum: 1 },
+                        revenue: { $sum: '$amount' }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        date: '$_id',
+                        count: 1,
+                        revenue: 1
+                    }
+                },
+                {
+                    $sort: { date: 1 }
                 }
-                salesByDate[date].count += 1;
-                salesByDate[date].revenue += sale.amount;
-            });
+            ]).toArray();
 
-            return Object.values(salesByDate).sort((a, b) => 
-                new Date(a.date) - new Date(b.date)
-            );
+            return salesTrend;
         } catch (error) {
             console.error('Error getting sales trend:', error);
             throw error;
@@ -148,15 +162,73 @@ const AnalyticsService = {
 
     getUserAnalytics: async (userEmail) => {
         try {
-            const transactions = await TransactionModel.findByUser(userEmail);
-            const purchases = transactions.filter(t => t.type === 'purchase');
-            const exchanges = transactions.filter(t => t.type === 'exchange');
+            const { getCollection } = require('../utils/db');
+            const transactionsCollection = getCollection('transactions');
             
-            return {
-                totalPurchases: purchases.length,
-                totalExchanges: exchanges.length,
-                totalSpent: purchases.reduce((sum, t) => sum + (t.amount || 0), 0),
-                totalSaved: exchanges.reduce((sum, t) => sum + (t.discountAmount || 0), 0)
+            // Optimized aggregation pipeline - single query instead of multiple
+            const analytics = await transactionsCollection.aggregate([
+                {
+                    $match: {
+                        userEmail: userEmail
+                    }
+                },
+                {
+                    $group: {
+                        _id: '$type',
+                        count: { $sum: 1 },
+                        totalAmount: { 
+                            $sum: { 
+                                $cond: [
+                                    { $eq: ['$type', 'purchase'] },
+                                    { $ifNull: ['$amount', 0] },
+                                    0
+                                ]
+                            }
+                        },
+                        totalSaved: {
+                            $sum: {
+                                $cond: [
+                                    { $eq: ['$type', 'exchange'] },
+                                    { $ifNull: ['$discountAmount', 0] },
+                                    0
+                                ]
+                            }
+                        }
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        totalPurchases: {
+                            $sum: {
+                                $cond: [{ $eq: ['$_id', 'purchase'] }, '$count', 0]
+                            }
+                        },
+                        totalExchanges: {
+                            $sum: {
+                                $cond: [{ $eq: ['$_id', 'exchange'] }, '$count', 0]
+                            }
+                        },
+                        totalSpent: { $sum: '$totalAmount' },
+                        totalSaved: { $sum: '$totalSaved' }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        totalPurchases: { $ifNull: ['$totalPurchases', 0] },
+                        totalExchanges: { $ifNull: ['$totalExchanges', 0] },
+                        totalSpent: { $ifNull: ['$totalSpent', 0] },
+                        totalSaved: { $ifNull: ['$totalSaved', 0] }
+                    }
+                }
+            ]).toArray();
+
+            return analytics[0] || {
+                totalPurchases: 0,
+                totalExchanges: 0,
+                totalSpent: 0,
+                totalSaved: 0
             };
         } catch (error) {
             console.error('Error getting user analytics:', error);

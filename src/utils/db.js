@@ -41,4 +41,4 @@ const getCollection = (collectionName) => {
     return getDB().collection(collectionName);
 };
 
-module.exports = { connectDB, getCollection, client };
+module.exports = { connectDB, getDB, getCollection, client };
